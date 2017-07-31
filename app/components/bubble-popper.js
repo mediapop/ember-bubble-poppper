@@ -1,0 +1,1 @@
+export { default } from 'ember-bubble-popper/components/bubble-popper';
