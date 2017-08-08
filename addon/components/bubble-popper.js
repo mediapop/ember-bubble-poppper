@@ -96,10 +96,5 @@ export default Ember.Component.extend({
       'targetX': e.offsetX,
       'targetY': e.offsetY,
     });
-  },
-  actions: {
-    mousemove(e) {
-      console.log(e);
-    }
   }
 });
