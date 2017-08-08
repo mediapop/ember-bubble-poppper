@@ -1,4 +1,8 @@
 import Ember from 'ember';
+import TrigometryFunctions from 'npm:trigonometry-calculator';
+
+// Because it's a CommonJS module we can't directly import the individual trig function.
+const {trigCalculator} = TrigometryFunctions;
 
 export default Ember.Component.extend({
   tagName: 'canvas',
@@ -20,8 +24,8 @@ export default Ember.Component.extend({
     const bubbles = new Image();
 
     function drawTo(row, column, bubble) {
-      const offsetX = (row % 2) * (85/2);
-      const offsetY = row * 85/8;
+      const offsetX = (row % 2) * (85 / 2);
+      const offsetY = row * 85 / 8;
 
 
       ctx.drawImage(bubbles,
@@ -64,5 +68,38 @@ export default Ember.Component.extend({
       drawTo(2, 9, 4);
     };
     this.set("bubbles", bubbles);
+  },
+  click(e) {
+    console.log(e);
+  },
+
+  centerWidth: Ember.computed('width', function () {
+    return this.get('width') / 2;
+  }),
+  playerOrientation: Ember.computed('targetX', 'targetY', 'centerWidth', 'height', function () {
+    const width = this.get('centerWidth');
+    const height = this.get('height');
+
+    let unsolvedTriangle = {
+      angles: {
+        2: 90,
+      },
+      sides: {
+        0: parseInt(width - e.offsetX, 10),
+        1: parseInt(height - e.offsetY, 10),
+      },
+    };
+    return trigCalculator(unsolvedTriangle);
+  }),
+  mouseMove(e) {
+    this.setProperties({
+      'targetX': e.offsetX,
+      'targetY': e.offsetY,
+    });
+  },
+  actions: {
+    mousemove(e) {
+      console.log(e);
+    }
   }
 });
