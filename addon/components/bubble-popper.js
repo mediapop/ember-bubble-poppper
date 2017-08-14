@@ -97,7 +97,7 @@ export default Ember.Component.extend({
       type: 0,
       speed: 0,
       velocityX: 0,
-      velocityY: -1,
+      velocityY: 0,
       positionX: this.get('width') / 2,
       positionY: this.get('height') - this.get('rotatedMaxDimensions') / 2
     }));
@@ -152,12 +152,25 @@ export default Ember.Component.extend({
     ctx.stroke();
 
     this.updateMovements();
+    this.checkCollission();
 
     this.drawGameBoard();
     this.drawProjectile();
     this.drawPlayer();
 
     requestAnimationFrame(this.gameLoop.bind(this));
+  },
+
+  checkCollission() {
+    const projectileX1 = this.get('projectile.positionX') - (85 / 2);
+    const projectileX2 = projectileX1 + 85;
+    const projectileY2 = this.get('projectile.positionY') + (85 / 2);
+
+    if (projectileX1 <= 0 || projectileX2 > this.get('width')) {
+      this.set('projectile.velocityX', -this.get('projectile.velocityX'));
+    } else if (projectileY2 < 0) {
+      
+    }
   },
 
   drawProjectile(){
@@ -189,8 +202,12 @@ export default Ember.Component.extend({
     this.loadResource("player.png", "player");
   },
   click(e) {
-    // console.log(this.get("playerRotation"));
-    Math.sin(this.get("playerRotation"))
+    const radians = this.get("playerRotation") * (Math.PI / 180);
+    const directionX = -Math.cos(radians);
+    const directionY = Math.sin(-radians);
+
+    this.set('projectile.velocityX', directionX);
+    this.set('projectile.velocityY', directionY);
   },
 
   playerPosition: Ember.computed("height", "width", "playerWidth", "rotatedMaxDimensions", function () {
