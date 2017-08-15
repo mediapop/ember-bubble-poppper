@@ -5,8 +5,14 @@ import TrigometryFunctions from 'npm:trigonometry-calculator';
 const {trigCalculator} = TrigometryFunctions;
 
 const Projectile = Ember.Object.extend({
+  moving: Ember.computed("velocityX", "velocityY", function () {
+    return this.get('velocityX') !== 0 || this.get('velocityY') !== 0;
+  })
 });
 
+const GamePiece = Ember.Object.extend({
+  
+});
 
 export default Ember.Component.extend({
   tagName: 'canvas',
@@ -38,6 +44,17 @@ export default Ember.Component.extend({
       }
     }
     return board;
+  }),
+
+  collisionObjects: Ember.computed('gameBoard', function(){
+    return this.get('gameBoard').map(obj => {
+      return {
+        x1: obj[1] * 85,
+        y1: obj[0] * 85,
+        x1: obj[1] * 85,
+        y1: obj[0] * 85
+      }
+    });
   }),
 
   resourceLoaded() {
@@ -152,7 +169,7 @@ export default Ember.Component.extend({
     ctx.stroke();
 
     this.updateMovements();
-    this.checkCollission();
+    this.checkCollision();
 
     this.drawGameBoard();
     this.drawProjectile();
@@ -161,7 +178,7 @@ export default Ember.Component.extend({
     requestAnimationFrame(this.gameLoop.bind(this));
   },
 
-  checkCollission() {
+  checkCollision() {
     const projectileX1 = this.get('projectile.positionX') - (85 / 2);
     const projectileX2 = projectileX1 + 85;
     const projectileY2 = this.get('projectile.positionY') + (85 / 2);
@@ -169,7 +186,11 @@ export default Ember.Component.extend({
     if (projectileX1 <= 0 || projectileX2 > this.get('width')) {
       this.set('projectile.velocityX', -this.get('projectile.velocityX'));
     } else if (projectileY2 < 0) {
-      
+      this.addProjectile();
+    } else {
+      this.get('gameBoard').forEach(obj => {
+        debugger;
+      });
     }
   },
 
@@ -183,8 +204,8 @@ export default Ember.Component.extend({
     ctx.drawImage(
       bubbles,
       bubble * 85, 0, 85, 85,
-      positionX - 85/2,
-      positionY - 85/2,
+      positionX - 85 / 2,
+      positionY - 85 / 2,
       85,
       85
     );
@@ -201,7 +222,10 @@ export default Ember.Component.extend({
     this.loadResource("bubbles.png", "bubbles");
     this.loadResource("player.png", "player");
   },
-  click(e) {
+  click() {
+    if(this.get('projectile.moving')){
+      return;
+    }
     const radians = this.get("playerRotation") * (Math.PI / 180);
     const directionX = -Math.cos(radians);
     const directionY = Math.sin(-radians);
