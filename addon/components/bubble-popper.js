@@ -60,34 +60,26 @@ export default Ember.Component.extend({
   }),
   height: Ember.computed(function () {
     // @todo This is inaccurate. The rows actually squeeze together.
-    return 85 * this.get('gameHeight');
+    const gameBoardHeight = (7 * this.get('pieceWidth') * this.get('gameHeight') / 8) + (85 / 8);
+    const buffer = this.get('pieceWidth') * 2;
+    // noinspection UnnecessaryLocalVariableJS
+    const playerHeight = buffer;
+    return gameBoardHeight + buffer + playerHeight;
   }),
   gameBoard: [],
 
-  createAGameBoard() {
-    const board = [];
+  initializeAGameBoard() {
     const gameWidth = this.get('gameWidth');
-    const width = 85;
-    const height = 85;
-    for (let row = 0; row < 3; row++) {
+    for (let row = 0; row < this.get('gameHeight'); row++) {
       for (let column = 0; column < gameWidth; column++) {
         // Uneven rows can hold 1 less.
         if (row % 2 !== 0 && (column + 1) === gameWidth) {
           break;
         }
         const type = Math.round(Math.random() * 10) % 5;
-        board.push(
-          GamePiece.create({
-            row,
-            column,
-            type,
-            width,
-            height
-          })
-        );
+        this.addGamePiece(row, column);
       }
     }
-    return board;
   },
 
   resourceLoaded() {
@@ -128,7 +120,7 @@ export default Ember.Component.extend({
       rotatedMaxDimensions: Math.sqrt(Math.pow(player.height, 2) + Math.pow(player.width, 2))
     });
 
-    this.set('gameBoard', this.createAGameBoard());
+    this.initializeAGameBoard();
     this.addProjectile();
 
     this.set('lastTime', new Date());
@@ -149,12 +141,18 @@ export default Ember.Component.extend({
     projectile.set('positionY', positionY + velocityY);
   },
 
-  addProjectile() {
-    const types = this.get('availableTypes');
-    const type = types[Math.round(Math.random() * 10) % types.length];
+  getRandomType(all = false) {
+    if (all) {
+      return Math.round(Math.random() * 10) % 5
+    } else {
+      const types = this.get('availableTypes');
+      return types[Math.round(Math.random() * 10) % types.length];
+    }
+  },
 
+  addProjectile() {
     this.set('projectile', Projectile.create({
-      type,
+      type: this.getRandomType(),
       speed: 0,
       velocityX: 0,
       velocityY: 0,
@@ -223,62 +221,75 @@ export default Ember.Component.extend({
     requestAnimationFrame(this.gameLoop.bind(this));
   },
 
+  addGamePiece(row, column, type = this.getRandomType(true)) {
+    const gamePiece = GamePiece.create({
+      row,
+      column,
+      type: type,
+      width: this.get('pieceWidth'),
+      height: this.get('pieceWidth'),
+    });
+
+    this.get('gameBoard').push(gamePiece);
+  },
+
   checkCollision() {
     const width = 85;
-    const height = 85;
     const radius = width / 2;
     const centerX = this.get('projectile.positionX');
     const centerY = this.get('projectile.positionY');
 
     const projectileX1 = centerX - radius;
     const projectileX2 = projectileX1 + width;
-    const projectileY2 = centerY + radius;
+    const projectileY1 = centerY - radius;
 
     if (projectileX1 <= 0 || projectileX2 > this.get('width')) {
       this.set('projectile.velocityX', -this.get('projectile.velocityX'));
-    } else if (projectileY2 < 0) {
-      this.addProjectile();
+      return;
+    }
+
+    let type;
+    let column;
+    let row;
+
+    if (projectileY1 < 0) {
+      column = Math.floor(centerX / width);
+      row = 0;
+      type = this.getRandomType(false);
     } else {
       const collision = this.getGameBoardCollision();
-      let column;
 
-      if(!collision){
+      if (!collision) {
         return;
       }
 
-      const row = collision.get('row') + 1;
+      row = collision.get('row') + 1;
 
-      if(centerX < collision.get('centerX')){
+      if (centerX < collision.get('centerX')) {
         column = collision.get('column') - (row % 2);
       } else {
         column = collision.get('column') + ((row + 1) % 2);
       }
 
-      console.log("I collided with ", collision.get('row'), collision.get('column'));
-      console.log("I want to be placed on ", row, column);
+      type = this.get('projectile.type');
+    }
 
-      const gamePiece = GamePiece.create({
-        row,
-        column,
-        type: this.get('projectile.type'),
-        width,
-        height
-      });
-
-      this.get('gameBoard').push(gamePiece);
-
+    if(row <= this.get('gameHeight')){
+      this.addGamePiece(row, column, type);
       const similar = this.findSimilar(row, column);
 
-      if(similar.length > 2){
-        for(const gamePiece of similar){
+      if (similar.length > 2) {
+        this.sendAction('poppedBubbles', similar.length);
+
+        for (const gamePiece of similar) {
           this.removeProjectile(gamePiece.get('row'), gamePiece.get('column'));
         }
       }
-
-      this.addProjectile();
-
     }
+
+    this.addProjectile();
   },
+
   /**
    * Get the surrounding grid coordinates.
    * @param row
@@ -294,9 +305,8 @@ export default Ember.Component.extend({
       {row: row, column: column + 1},
       {row: row, column: column - 1},
 
-
       {row: row + 1, column: column - neighbouringRowColumnOffset},
-      {row: row + 1, column: column + 1  - neighbouringRowColumnOffset},
+      {row: row + 1, column: column + 1 - neighbouringRowColumnOffset},
     ];
     return neighbours.filter(neighbour => this.withinGridBounds(neighbour.row, neighbour.column));
   },
@@ -307,8 +317,8 @@ export default Ember.Component.extend({
    * @param column
    * @returns {boolean}
    */
-  withinGridBounds(row, column){
-    return  row > 0 || column > 0 || this.get('width') < column|| this.get('height') < row;
+  withinGridBounds(row, column) {
+    return row >= 0 || column >= 0 || this.get('width') < column || this.get('height') < row;
   },
 
   /**
@@ -316,8 +326,8 @@ export default Ember.Component.extend({
    * @param row
    * @param column
    */
-  getGamePieceAt(row, column){
-    for(const obj of this.get('gameBoard')){
+  getGamePieceAt(row, column) {
+    for (const obj of this.get('gameBoard')) {
       if (obj.get('row') === row && obj.get('column') === column) {
         return obj;
       }
@@ -325,24 +335,25 @@ export default Ember.Component.extend({
     return false;
   },
 
-  getNeighbouringGamePieces(row, column){
+  getNeighbouringGamePieces(row, column) {
     return this.getNeighbouringCoordinated(row, column)
       .map(coordinate => this.getGamePieceAt(coordinate.row, coordinate.column))
       .filter(obj => obj);
   },
 
   findSimilar(row, column) {
+    console.log(row, column);
     const originPiece = this.getGamePieceAt(row, column);
     let check = this.getNeighbouringGamePieces(row, column);
 
     let checked = [originPiece];
     let found = [originPiece];
 
-    while(check.length > 0){
+    while (check.length > 0) {
       const nextPiece = check.pop();
       checked.push(nextPiece);
 
-      if(nextPiece.get('type') === originPiece.get('type')){
+      if (nextPiece.get('type') === originPiece.get('type')) {
         found.push(nextPiece);
 
         let gamePieces = this.getNeighbouringGamePieces(nextPiece.get('row'), nextPiece.get('column'));
@@ -359,14 +370,14 @@ export default Ember.Component.extend({
     this.set('gameBoard', board);
   },
 
-  getGameBoardCollision(){
+  getGameBoardCollision() {
     const width = 85;
     const radiusReduction = 0.8;
     const radius = (width / 2) * radiusReduction;
     const centerX = this.get('projectile.positionX');
     const centerY = this.get('projectile.positionY');
 
-    for(const obj of this.get('gameBoard')){
+    for (const obj of this.get('gameBoard')) {
       const dx = centerX - obj.get('centerX');
       const dy = centerY - obj.get('centerY');
       const distance = Math.sqrt(dx * dx + dy * dy);
