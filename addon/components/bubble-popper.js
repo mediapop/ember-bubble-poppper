@@ -11,13 +11,46 @@ const Projectile = Ember.Object.extend({
 });
 
 const GamePiece = Ember.Object.extend({
-  
+  x1: Ember.computed('row', 'column', function () {
+    const column = this.get('column');
+    const width = this.get('width');
+    const offsetX = this.get('offsetX');
+    return column * width + offsetX;
+  }),
+  x2: Ember.computed('row', 'column', function () {
+    const x1 = this.get('x1');
+    const width = this.get('width');
+    return x1 + width;
+  }),
+  offsetX: Ember.computed("row", "width", function () {
+    return (this.get('row') % 2) * (this.get('width') / 2);
+  }),
+  y1: Ember.computed('row', 'column', function () {
+    const row = this.get('row');
+    const height = this.get('height');
+    return 7 * height * row / 8;
+  }),
+  y2: Ember.computed('row', 'column', function () {
+    const y1 = this.get('y1');
+    const height = this.get('height');
+    return y1 + height;
+  }),
+  radius: Ember.computed('width', function () {
+    return this.get('width') / 2;
+  }),
+  centerX: Ember.computed('x1', 'radius', function () {
+    return this.get('x1') + this.get('radius');
+  }),
+  centerY: Ember.computed('y1', 'radius', function () {
+    return this.get('y1') + this.get('radius');
+  })
 });
 
 export default Ember.Component.extend({
   tagName: 'canvas',
   gameWidth: 10,
   gameHeight: 10,
+  pieceWidth: 85,
 
   _start: 0,
 
@@ -29,33 +62,33 @@ export default Ember.Component.extend({
     // @todo This is inaccurate. The rows actually squeeze together.
     return 85 * this.get('gameHeight');
   }),
+  gameBoard: [],
 
-  gameBoard: Ember.computed(function () {
+  createAGameBoard() {
     const board = [];
     const gameWidth = this.get('gameWidth');
+    const width = 85;
+    const height = 85;
     for (let row = 0; row < 3; row++) {
       for (let column = 0; column < gameWidth; column++) {
         // Uneven rows can hold 1 less.
         if (row % 2 !== 0 && (column + 1) === gameWidth) {
           break;
         }
-        const bubbleType = Math.round(Math.random() * 10) % 5;
-        board.push([row, column, bubbleType]);
+        const type = Math.round(Math.random() * 10) % 5;
+        board.push(
+          GamePiece.create({
+            row,
+            column,
+            type,
+            width,
+            height
+          })
+        );
       }
     }
     return board;
-  }),
-
-  collisionObjects: Ember.computed('gameBoard', function(){
-    return this.get('gameBoard').map(obj => {
-      return {
-        x1: obj[1] * 85,
-        y1: obj[0] * 85,
-        x1: obj[1] * 85,
-        y1: obj[0] * 85
-      }
-    });
-  }),
+  },
 
   resourceLoaded() {
     if (this.decrementProperty("_start") === 0) {
@@ -71,15 +104,18 @@ export default Ember.Component.extend({
     this.incrementProperty("_start");
   },
 
-  drawBubble(row, column, bubble) {
+  /**
+   * We don't want to get projectiles for types that have already been cleared.
+   */
+  availableTypes: Ember.computed.mapBy('gameBoard', 'type'),
+
+  drawBubble(bubble) {
     const ctx = this.get('ctx');
     const bubbles = this.get('bubbles');
-    const offsetX = (row % 2) * (85 / 2);
-    const offsetY = row * 85 / 8;
-
+    const type = bubble.get('type');
     ctx.drawImage(bubbles,
-      bubble * 85, 0, 85, 85,
-      column * 85 + offsetX, row * 85 - offsetY, 85, 85);
+      type * 85, 0, 85, 85,
+      bubble.get('x1'), bubble.get('y1'), 85, 85);
   },
 
   startGame() {
@@ -92,26 +128,33 @@ export default Ember.Component.extend({
       rotatedMaxDimensions: Math.sqrt(Math.pow(player.height, 2) + Math.pow(player.width, 2))
     });
 
-    const ctx = this.get('ctx');
-
+    this.set('gameBoard', this.createAGameBoard());
     this.addProjectile();
 
+    this.set('lastTime', new Date());
     this.gameLoop();
   },
 
   updateMovements() {
+    const duration = this.get('duration');
     const projectile = this.get('projectile');
-    const velocityX = projectile.get('velocityX');
-    const velocityY = projectile.get('velocityY');
+
+    const velocityX = projectile.get('velocityX') * duration;
+    const velocityY = projectile.get('velocityY') * duration;
+
     const positionX = projectile.get('positionX');
     const positionY = projectile.get('positionY');
+
     projectile.set('positionX', positionX + velocityX);
     projectile.set('positionY', positionY + velocityY);
   },
 
   addProjectile() {
+    const types = this.get('availableTypes');
+    const type = types[Math.round(Math.random() * 10) % types.length];
+
     this.set('projectile', Projectile.create({
-      type: 0,
+      type,
       speed: 0,
       velocityX: 0,
       velocityY: 0,
@@ -148,9 +191,7 @@ export default Ember.Component.extend({
 
   drawGameBoard() {
     const gameBoard = this.get("gameBoard");
-    gameBoard.forEach(bubble => {
-      this.drawBubble.apply(this, bubble);
-    });
+    gameBoard.forEach(this.drawBubble.bind(this));
   },
 
   clearBoard() {
@@ -159,6 +200,10 @@ export default Ember.Component.extend({
   },
 
   gameLoop() {
+    const dateNow = new Date();
+    this.set("duration", dateNow - this.get('lastTime'));
+    this.set('lastTime', dateNow);
+
     this.clearBoard();
     const ctx = this.get('ctx');
 
@@ -179,22 +224,161 @@ export default Ember.Component.extend({
   },
 
   checkCollision() {
-    const projectileX1 = this.get('projectile.positionX') - (85 / 2);
-    const projectileX2 = projectileX1 + 85;
-    const projectileY2 = this.get('projectile.positionY') + (85 / 2);
+    const width = 85;
+    const height = 85;
+    const radius = width / 2;
+    const centerX = this.get('projectile.positionX');
+    const centerY = this.get('projectile.positionY');
+
+    const projectileX1 = centerX - radius;
+    const projectileX2 = projectileX1 + width;
+    const projectileY2 = centerY + radius;
 
     if (projectileX1 <= 0 || projectileX2 > this.get('width')) {
       this.set('projectile.velocityX', -this.get('projectile.velocityX'));
     } else if (projectileY2 < 0) {
       this.addProjectile();
     } else {
-      this.get('gameBoard').forEach(obj => {
-        debugger;
+      const collision = this.getGameBoardCollision();
+      let column;
+
+      if(!collision){
+        return;
+      }
+
+      const row = collision.get('row') + 1;
+
+      if(centerX < collision.get('centerX')){
+        column = collision.get('column') - (row % 2);
+      } else {
+        column = collision.get('column') + ((row + 1) % 2);
+      }
+
+      console.log("I collided with ", collision.get('row'), collision.get('column'));
+      console.log("I want to be placed on ", row, column);
+
+      const gamePiece = GamePiece.create({
+        row,
+        column,
+        type: this.get('projectile.type'),
+        width,
+        height
       });
+
+      this.get('gameBoard').push(gamePiece);
+
+      const similar = this.findSimilar(row, column);
+
+      if(similar.length > 2){
+        for(const gamePiece of similar){
+          this.removeProjectile(gamePiece.get('row'), gamePiece.get('column'));
+        }
+      }
+
+      this.addProjectile();
+
     }
   },
+  /**
+   * Get the surrounding grid coordinates.
+   * @param row
+   * @param column
+   */
+  getNeighbouringCoordinated(row, column) {
+    const neighbouringRowColumnOffset = ((row + 1) % 2);
 
-  drawProjectile(){
+    const neighbours = [
+      {row: row - 1, column: column - neighbouringRowColumnOffset},
+      {row: row - 1, column: column + 1 - neighbouringRowColumnOffset},
+
+      {row: row, column: column + 1},
+      {row: row, column: column - 1},
+
+
+      {row: row + 1, column: column - neighbouringRowColumnOffset},
+      {row: row + 1, column: column + 1  - neighbouringRowColumnOffset},
+    ];
+    return neighbours.filter(neighbour => this.withinGridBounds(neighbour.row, neighbour.column));
+  },
+
+  /**
+   * Return true if the row/column is within the bounds of the GameBoard.
+   * @param row
+   * @param column
+   * @returns {boolean}
+   */
+  withinGridBounds(row, column){
+    return  row > 0 || column > 0 || this.get('width') < column|| this.get('height') < row;
+  },
+
+  /**
+   * Get the gamePiece at a coordinate.
+   * @param row
+   * @param column
+   */
+  getGamePieceAt(row, column){
+    for(const obj of this.get('gameBoard')){
+      if (obj.get('row') === row && obj.get('column') === column) {
+        return obj;
+      }
+    }
+    return false;
+  },
+
+  getNeighbouringGamePieces(row, column){
+    return this.getNeighbouringCoordinated(row, column)
+      .map(coordinate => this.getGamePieceAt(coordinate.row, coordinate.column))
+      .filter(obj => obj);
+  },
+
+  findSimilar(row, column) {
+    const originPiece = this.getGamePieceAt(row, column);
+    let check = this.getNeighbouringGamePieces(row, column);
+
+    let checked = [originPiece];
+    let found = [originPiece];
+
+    while(check.length > 0){
+      const nextPiece = check.pop();
+      checked.push(nextPiece);
+
+      if(nextPiece.get('type') === originPiece.get('type')){
+        found.push(nextPiece);
+
+        let gamePieces = this.getNeighbouringGamePieces(nextPiece.get('row'), nextPiece.get('column'));
+        gamePieces = gamePieces.filter(gamePiece => !checked.includes(gamePiece) && !check.includes(gamePiece));
+
+        check = check.concat(gamePieces);
+      }
+    }
+    return found;
+  },
+
+  removeProjectile(row, column) {
+    const board = this.get('gameBoard').filter(obj => obj.get('row') !== row || obj.get('column') !== column);
+    this.set('gameBoard', board);
+  },
+
+  getGameBoardCollision(){
+    const width = 85;
+    const radiusReduction = 0.8;
+    const radius = (width / 2) * radiusReduction;
+    const centerX = this.get('projectile.positionX');
+    const centerY = this.get('projectile.positionY');
+
+    for(const obj of this.get('gameBoard')){
+      const dx = centerX - obj.get('centerX');
+      const dy = centerY - obj.get('centerY');
+      const distance = Math.sqrt(dx * dx + dy * dy);
+
+      if (distance < (radius + radius)) {
+        return obj;
+      }
+    }
+    return false;
+  },
+
+  drawProjectile() {
     const bubbles = this.get('bubbles');
     const ctx = this.get('ctx');
     const bubble = this.get('projectile.type');
@@ -211,10 +395,6 @@ export default Ember.Component.extend({
     );
   },
 
-  draw() {
-
-  },
-
   didInsertElement() {
     const ctx = this.element.getContext("2d");
     this.set("ctx", ctx);
@@ -223,7 +403,7 @@ export default Ember.Component.extend({
     this.loadResource("player.png", "player");
   },
   click() {
-    if(this.get('projectile.moving')){
+    if (this.get('projectile.moving')) {
       return;
     }
     const radians = this.get("playerRotation") * (Math.PI / 180);
