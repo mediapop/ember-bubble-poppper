@@ -274,7 +274,7 @@ export default Ember.Component.extend({
       type = this.get('projectile.type');
     }
 
-    if(row <= this.get('gameHeight')){
+    if (row <= this.get('gameHeight')) {
       this.addGamePiece(row, column, type);
       const similar = this.findSimilar(row, column);
 
