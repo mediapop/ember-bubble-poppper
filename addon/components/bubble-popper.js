@@ -202,13 +202,13 @@ export default Ember.Component.extend({
     this.set('lastTime', dateNow);
 
     this.clearBoard();
-    const ctx = this.get('ctx');
-
-    ctx.beginPath();
-    ctx.lineWidth = 1;
-    ctx.moveTo(parseInt(this.get('width') / 2), 0);
-    ctx.lineTo(parseInt(this.get('width') / 2), this.get('height'));
-    ctx.stroke();
+    
+    // const ctx = this.get('ctx');
+    // ctx.beginPath();
+    // ctx.lineWidth = 1;
+    // ctx.moveTo(parseInt(this.get('width') / 2), 0);
+    // ctx.lineTo(parseInt(this.get('width') / 2), this.get('height'));
+    // ctx.stroke();
 
     this.updateMovements();
     this.checkCollision();
