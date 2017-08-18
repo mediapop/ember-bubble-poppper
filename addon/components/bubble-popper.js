@@ -145,7 +145,7 @@ export default Ember.Component.extend({
       return Math.round(Math.random() * 10) % 5
     } else {
       const types = this.get('availableTypes');
-      return types[Math.round(Math.random() * 10) % types.length];
+      return types[Math.floor(Math.random() * 1000) % types.length];
     }
   },
 
