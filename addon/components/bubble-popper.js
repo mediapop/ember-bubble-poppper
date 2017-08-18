@@ -202,7 +202,7 @@ export default Ember.Component.extend({
     this.set('lastTime', dateNow);
 
     this.clearBoard();
-    
+
     // const ctx = this.get('ctx');
     // ctx.beginPath();
     // ctx.lineWidth = 1;
@@ -341,7 +341,6 @@ export default Ember.Component.extend({
   },
 
   findSimilar(row, column) {
-    console.log(row, column);
     const originPiece = this.getGamePieceAt(row, column);
     let check = this.getNeighbouringGamePieces(row, column);
 
@@ -440,7 +439,6 @@ export default Ember.Component.extend({
     const width = this.get('centerWidth');
 
     const coordinateMultiplier = width / (clientWidth / 2);
-    console.log(coordinateMultiplier);
 
     const height = this.get('height');
 
