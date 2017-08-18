@@ -51,6 +51,7 @@ export default Ember.Component.extend({
   gameWidth: 10,
   gameHeight: 10,
   pieceWidth: 85,
+  paused: false,
 
   _start: 0,
 
@@ -200,6 +201,11 @@ export default Ember.Component.extend({
     const dateNow = new Date();
     this.set("duration", dateNow - this.get('lastTime'));
     this.set('lastTime', dateNow);
+    requestAnimationFrame(this.gameLoop.bind(this));
+
+    if(this.get('paused')){
+      return;
+    }
 
     this.clearBoard();
 
@@ -216,8 +222,6 @@ export default Ember.Component.extend({
     this.drawGameBoard();
     this.drawProjectile();
     this.drawPlayer();
-
-    requestAnimationFrame(this.gameLoop.bind(this));
   },
 
   addGamePiece(row, column, type = this.getRandomType(true)) {
