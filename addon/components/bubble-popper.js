@@ -435,10 +435,18 @@ export default Ember.Component.extend({
     return this.get('width') / 2;
   }),
   playerOrientation: Ember.computed('targetX', 'targetY', 'centerWidth', 'height', function () {
+    const clientWidth = document.querySelector('canvas').clientWidth;
+
     const width = this.get('centerWidth');
+
+    const coordinateMultiplier = width / (clientWidth / 2);
+    console.log(coordinateMultiplier);
+
     const height = this.get('height');
-    const targetX = this.get('targetX');
-    const targetY = this.get('targetY');
+
+    const targetX = this.get('targetX') * coordinateMultiplier;
+    const targetY = this.get('targetY') * coordinateMultiplier;
+
     const playerYCenter = height - this.get('rotatedMaxDimensions') / 2;
 
     const unsolvedTriangle = {
