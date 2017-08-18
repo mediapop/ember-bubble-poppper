@@ -58,12 +58,11 @@ export default Ember.Component.extend({
   width: Ember.computed(function () {
     return 85 * this.get('gameWidth');
   }),
-  height: Ember.computed(function () {
+  height: Ember.computed('playerHeight', function () {
     // @todo This is inaccurate. The rows actually squeeze together.
     const gameBoardHeight = (7 * this.get('pieceWidth') * this.get('gameHeight') / 8) + (85 / 8);
-    const buffer = this.get('pieceWidth') * 2;
-    // noinspection UnnecessaryLocalVariableJS
-    const playerHeight = buffer;
+    const buffer = this.get('pieceWidth');
+    const playerHeight = this.get('playerHeight');
     return gameBoardHeight + buffer + playerHeight;
   }),
   gameBoard: [],
