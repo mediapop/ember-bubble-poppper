@@ -76,7 +76,6 @@ export default Ember.Component.extend({
         if (row % 2 !== 0 && (column + 1) === gameWidth) {
           break;
         }
-        const type = Math.round(Math.random() * 10) % 5;
         this.addGamePiece(row, column);
       }
     }
@@ -203,7 +202,7 @@ export default Ember.Component.extend({
     this.set('lastTime', dateNow);
     requestAnimationFrame(this.gameLoop.bind(this));
 
-    if(this.get('paused')){
+    if (this.get('paused')) {
       return;
     }
 
@@ -287,10 +286,52 @@ export default Ember.Component.extend({
         for (const gamePiece of similar) {
           this.removeProjectile(gamePiece.get('row'), gamePiece.get('column'));
         }
+
+        this.clearOrphans();
       }
     }
 
     this.addProjectile();
+  },
+
+  clearOrphans() {
+    const attached = [];
+    const all = [];
+
+    for (let column = 0; column < this.get('gameWidth'); column++) {
+      const gamePiece = this.getGamePieceAt(0, column);
+      if (attached.includes(gamePiece) || gamePiece === false) {
+        continue;
+      }
+
+      const matches = this.getAllConnected(gamePiece).filter(gamePiece => !all.includes(gamePiece));
+      all.push(...matches);
+    }
+
+    this.get('gameBoard')
+      .filter(gamePiece => !all.includes(gamePiece))
+      .forEach(gamePiece => {
+        this.removeProjectile(gamePiece.get('row'), gamePiece.get('column'));
+      });
+  },
+
+  /**
+   *
+   * @param gamePiece The game piece to find connections with.
+   * @returns {Array}
+   */
+  getAllConnected(gamePiece) {
+    const check = [gamePiece];
+    const found = [];
+    while (check.length) {
+      const next = check.pop();
+      found.push(next);
+      const neighbouring = this.getNeighbouringGamePieces(next.get('row'), next.get('column'));
+      const newPieces = neighbouring.filter(obj => !found.includes(obj) && !check.includes(obj));
+      check.push(...newPieces);
+    }
+
+    return found;
   },
 
   /**
