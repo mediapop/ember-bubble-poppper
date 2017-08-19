@@ -196,11 +196,16 @@ export default Ember.Component.extend({
     ctx.clearRect(0, 0, this.get('width'), this.get('height'));
   },
 
+  willDestroyElement(){
+    cancelAnimationFrame(this.get('runLoop'));
+  },
+
   gameLoop() {
+    this.set('runLoop', requestAnimationFrame(this.gameLoop.bind(this)));
+    
     const dateNow = new Date();
     this.set("duration", dateNow - this.get('lastTime'));
     this.set('lastTime', dateNow);
-    requestAnimationFrame(this.gameLoop.bind(this));
 
     if (this.get('paused')) {
       return;
