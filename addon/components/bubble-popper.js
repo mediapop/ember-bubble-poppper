@@ -467,8 +467,8 @@ export default Ember.Component.extend({
     const ctx = this.element.getContext("2d");
     this.set("ctx", ctx);
 
-    this.loadResource("bubbles.png", "bubbles");
-    this.loadResource("player.png", "player");
+    this.loadResource("/bubbles.png", "bubbles");
+    this.loadResource("/player.png", "player");
   },
   click() {
     if (this.get('projectile.moving')) {
