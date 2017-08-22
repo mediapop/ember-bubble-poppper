@@ -53,6 +53,14 @@ export default Ember.Component.extend({
   pieceWidth: 85,
   paused: false,
 
+  arc: 120,
+  minDegree: Ember.computed('arc', function(){
+    return 180 - this.get('arc') / 2;
+  }),
+  maxDegree: Ember.computed('minDegree', function(){
+    return 180 - this.get('minDegree');
+  }),
+
   _start: 0,
 
   attributeBindings: ['width', 'height'],
@@ -176,8 +184,9 @@ export default Ember.Component.extend({
 
   playerRotation: Ember.computed(function () {
     const rotation = this.get('playerOrientation.angles.1');
-    const min = 30;
-    const max = 180 - min;
+    const min = this.get('minDegree');
+    const max = this.get('maxDegree');
+
     if (rotation < min) {
       return min;
     } else if (rotation > max) {
@@ -202,7 +211,7 @@ export default Ember.Component.extend({
 
   gameLoop() {
     this.set('runLoop', requestAnimationFrame(this.gameLoop.bind(this)));
-    
+
     const dateNow = new Date();
     this.set("duration", dateNow - this.get('lastTime'));
     this.set('lastTime', dateNow);
