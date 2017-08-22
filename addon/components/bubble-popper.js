@@ -55,7 +55,7 @@ export default Ember.Component.extend({
 
   arc: 120,
   minDegree: Ember.computed('arc', function(){
-    return 180 - this.get('arc') / 2;
+    return (180 - this.get('arc')) / 2;
   }),
   maxDegree: Ember.computed('minDegree', function(){
     return 180 - this.get('minDegree');
