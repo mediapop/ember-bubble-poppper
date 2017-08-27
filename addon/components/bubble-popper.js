@@ -43,7 +43,8 @@ const GamePiece = Ember.Object.extend({
   }),
   centerY: Ember.computed('y1', 'radius', function () {
     return this.get('y1') + this.get('radius');
-  })
+  }),
+  zoom: 1
 });
 
 export default Ember.Component.extend({
@@ -112,9 +113,20 @@ export default Ember.Component.extend({
     const ctx = this.get('ctx');
     const bubbles = this.get('bubbles');
     const type = bubble.get('type');
-    ctx.drawImage(bubbles,
-      type * 85, 0, 85, 85,
-      bubble.get('x1'), bubble.get('y1'), 85, 85);
+    const zoom = bubble.get('zoom');
+    const size = 85;
+
+    const zoomOffset = (size - size * zoom) / 2;
+
+    ctx.drawImage(
+      bubbles,
+      type * size, 0,
+      size,
+      size,
+      bubble.get('x1') + zoomOffset,
+      bubble.get('y1') + zoomOffset,
+      size * zoom,
+      size * zoom);
   },
 
   startGame() {
