@@ -52,12 +52,14 @@ export default Ember.Component.extend({
   tagName: 'canvas',
   gameWidth: 10,
   gameHeight: 10,
+  // @todo Rename to size
   pieceWidth: 85,
   paused: false,
 
-  animationDuration: 200,
+  animationDuration: 1000,
+  // @todo rename to frames
   animationSteps: Ember.computed('bubbles', 'size', function () {
-    return (this.get('bubbles') / this.get('size')) - 1;
+    return (this.get('bubbles') / this.get('size'));
   }),
 
   arc: 120,
@@ -76,7 +78,7 @@ export default Ember.Component.extend({
   }),
   height: Ember.computed('playerHeight', function () {
     // @todo This is inaccurate. The rows actually squeeze together.
-    const gameBoardHeight = (7 * this.get('pieceWidth') * this.get('gameHeight') / 8) + (85 / 8);
+    const gameBoardHeight = (7 * this.get('pieceWidth') * this.get('gameHeight') / 8) + (this.get('pieceWidth') / 8);
     const buffer = this.get('pieceWidth');
     const playerHeight = this.get('playerHeight');
     return gameBoardHeight + buffer + playerHeight;
@@ -119,16 +121,26 @@ export default Ember.Component.extend({
     const ctx = this.get('ctx');
     const bubbles = this.get('bubbles');
     const type = bubble.get('type');
-    const zoom = bubble.get('zoom');
-    const size = 85;
-    const image = Math.floor(Math.random() * 1000) % 3;
+    let zoom = bubble.get('zoom');
+    const size = this.get('pieceWidth');
+
+    const duration = this.get('lastTime') - bubble.get('popped') || 0;
+    let imageIndex = 0;
+    if(duration){
+      const animationProportion = duration / this.get('animationDuration');
+      imageIndex = Math.floor((this.get('animationSteps') + 1) * animationProportion);
+      if(imageIndex > this.get('animationSteps')){
+        imageIndex = this.get('animationSteps');
+      }
+      zoom = (zoom + animationProportion)
+    }
 
     const zoomOffset = (size - size * zoom) / 2;
 
     ctx.drawImage(
       bubbles,
       type * size,
-      (size * image),
+      (size * imageIndex),
       size,
       size,
       bubble.get('x1') + zoomOffset,
@@ -147,7 +159,7 @@ export default Ember.Component.extend({
       rotatedMaxDimensions: Math.sqrt(Math.pow(player.height, 2) + Math.pow(player.width, 2))
     });
 
-    this.set('animationSteps', this.get('bubbles').height / this.get('size') - 1);
+    this.set('animationSteps', this.get('bubbles').height / this.get('pieceWidth') - 1);
 
     this.initializeAGameBoard();
     this.addProjectile();
@@ -292,7 +304,7 @@ export default Ember.Component.extend({
   },
 
   checkCollision() {
-    const width = 85;
+    const width = this.get('pieceWidth');
     const radius = width / 2;
     const centerX = this.get('projectile.positionX');
     const centerY = this.get('projectile.positionY');
@@ -476,7 +488,7 @@ export default Ember.Component.extend({
   },
 
   getGameBoardCollision() {
-    const width = 85;
+    const width = this.get('pieceWidth');
     const radiusReduction = 0.8;
     const radius = (width / 2) * radiusReduction;
     const centerX = this.get('projectile.positionX');
@@ -500,14 +512,18 @@ export default Ember.Component.extend({
     const bubble = this.get('projectile.type');
     const positionX = this.get('projectile.positionX');
     const positionY = this.get('projectile.positionY');
+    const size = this.get('pieceWidth');
 
     ctx.drawImage(
       bubbles,
-      bubble * 85, 0, 85, 85,
-      positionX - 85 / 2,
-      positionY - 85 / 2,
-      85,
-      85
+      bubble * size,
+      0,
+      size,
+      size,
+      positionX - size / 2,
+      positionY - size / 2,
+      size,
+      size
     );
   },
 
