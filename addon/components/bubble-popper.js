@@ -44,7 +44,8 @@ const GamePiece = Ember.Object.extend({
   centerY: Ember.computed('y1', 'radius', function () {
     return this.get('y1') + this.get('radius');
   }),
-  zoom: 1
+  zoom: 1,
+  popped: undefined
 });
 
 export default Ember.Component.extend({
@@ -53,6 +54,11 @@ export default Ember.Component.extend({
   gameHeight: 10,
   pieceWidth: 85,
   paused: false,
+
+  animationDuration: 200,
+  animationSteps: Ember.computed('bubbles', 'size', function () {
+    return (this.get('bubbles') / this.get('size')) - 1;
+  }),
 
   arc: 120,
   minDegree: Ember.computed('arc', function(){
@@ -115,12 +121,14 @@ export default Ember.Component.extend({
     const type = bubble.get('type');
     const zoom = bubble.get('zoom');
     const size = 85;
+    const image = Math.floor(Math.random() * 1000) % 3;
 
     const zoomOffset = (size - size * zoom) / 2;
 
     ctx.drawImage(
       bubbles,
-      type * size, 0,
+      type * size,
+      (size * image),
       size,
       size,
       bubble.get('x1') + zoomOffset,
@@ -139,6 +147,8 @@ export default Ember.Component.extend({
       rotatedMaxDimensions: Math.sqrt(Math.pow(player.height, 2) + Math.pow(player.width, 2))
     });
 
+    this.set('animationSteps', this.get('bubbles').height / this.get('size') - 1);
+
     this.initializeAGameBoard();
     this.addProjectile();
 
@@ -149,6 +159,14 @@ export default Ember.Component.extend({
   updateMovements() {
     const duration = this.get('duration');
     const projectile = this.get('projectile');
+
+    // this.get('gameBoard').forEach(bubble => {
+    //   bubble.set('zoom', bubble.get('zoom') * (1 - duration / 1000));
+    // });
+
+    // this.get('gameBoard').filter(obj => obj.get('popped')).forEach(bubble => {
+    //   bubble.set('zoom', bubble.get('zoom') * (1 - duration / 1000));
+    // });
 
     const velocityX = projectile.get('velocityX') * duration;
     const velocityY = projectile.get('velocityY') * duration;
@@ -247,6 +265,18 @@ export default Ember.Component.extend({
     this.drawGameBoard();
     this.drawProjectile();
     this.drawPlayer();
+
+    // Clear popped bubbles.
+    let board = this.get('gameBoard');
+    const animationDuration = this.get('animationDuration');
+    board = board.filter(obj => {
+      const popped = obj.get('popped');
+      if(!popped){
+        return true;
+      }
+      return (dateNow - popped) < animationDuration;
+    });
+    this.set('gameBoard', board);
   },
 
   addGamePiece(row, column, type = this.getRandomType(true)) {
@@ -352,7 +382,8 @@ export default Ember.Component.extend({
     while (check.length) {
       const next = check.pop();
       found.push(next);
-      const neighbouring = this.getNeighbouringGamePieces(next.get('row'), next.get('column'));
+      const neighbouring = this.getNeighbouringGamePieces(next.get('row'), next.get('column'))
+        .filter(obj => !obj.get('popped'));
       const newPieces = neighbouring.filter(obj => !found.includes(obj) && !check.includes(obj));
       check.push(...newPieces);
     }
@@ -435,8 +466,13 @@ export default Ember.Component.extend({
   },
 
   removeProjectile(row, column) {
-    const board = this.get('gameBoard').filter(obj => obj.get('row') !== row || obj.get('column') !== column);
-    this.set('gameBoard', board);
+    const board = this.get('gameBoard');
+    for(let obj of board){
+      if(obj.get('row') === row && obj.get('column') === column){
+        obj.set('popped', this.get('lastTime'));
+        break;
+      }
+    }
   },
 
   getGameBoardCollision() {
