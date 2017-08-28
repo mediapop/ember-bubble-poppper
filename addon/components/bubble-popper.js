@@ -335,7 +335,7 @@ export default Ember.Component.extend({
     if (projectileY1 < 0) {
       column = Math.floor(centerX / width);
       row = 0;
-      type = this.getRandomType(false);
+      type = this.get('projectile.type');
     } else {
       const collision = this.getGameBoardCollision();
 
