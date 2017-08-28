@@ -63,10 +63,10 @@ export default Ember.Component.extend({
   }),
 
   arc: 120,
-  minDegree: Ember.computed('arc', function(){
+  minDegree: Ember.computed('arc', function () {
     return (180 - this.get('arc')) / 2;
   }),
-  maxDegree: Ember.computed('minDegree', function(){
+  maxDegree: Ember.computed('minDegree', function () {
     return 180 - this.get('minDegree');
   }),
 
@@ -84,6 +84,7 @@ export default Ember.Component.extend({
     return gameBoardHeight + buffer + playerHeight;
   }),
   gameBoard: [],
+  gameBoardIndex: {},
 
   initializeAGameBoard() {
     const gameWidth = this.get('gameWidth');
@@ -126,10 +127,10 @@ export default Ember.Component.extend({
 
     const duration = this.get('lastTime') - bubble.get('popped') || 0;
     let imageIndex = 0;
-    if(duration){
+    if (duration) {
       const animationProportion = duration / this.get('animationDuration');
       imageIndex = Math.floor((this.get('animationSteps') + 1) * animationProportion);
-      if(imageIndex > this.get('animationSteps')){
+      if (imageIndex > this.get('animationSteps')) {
         imageIndex = this.get('animationSteps');
       }
       zoom = (zoom + animationProportion)
@@ -280,13 +281,18 @@ export default Ember.Component.extend({
 
     // Clear popped bubbles.
     let board = this.get('gameBoard');
+    let gameBoardIndex = this.get('gameBoardIndex');
     const animationDuration = this.get('animationDuration');
     board = board.filter(obj => {
       const popped = obj.get('popped');
-      if(!popped){
+      if (!popped) {
         return true;
       }
-      return (dateNow - popped) < animationDuration;
+      let active = (dateNow - popped) < animationDuration;
+      if (!active) {
+        gameBoardIndex[obj.get('row')][obj.get('column')] = undefined;
+      }
+      return active;
     });
     this.set('gameBoard', board);
   },
@@ -299,8 +305,12 @@ export default Ember.Component.extend({
       width: this.get('pieceWidth'),
       height: this.get('pieceWidth'),
     });
-
     this.get('gameBoard').push(gamePiece);
+    const index = this.get('gameBoardIndex');
+    if (!index[row]) {
+      index[row] = {};
+    }
+    index[row][column] = gamePiece
   },
 
   checkCollision() {
@@ -363,12 +373,11 @@ export default Ember.Component.extend({
   },
 
   clearOrphans() {
-    const attached = [];
     const all = [];
 
     for (let column = 0; column < this.get('gameWidth'); column++) {
       const gamePiece = this.getGamePieceAt(0, column);
-      if (attached.includes(gamePiece) || gamePiece === false) {
+      if (all.includes(gamePiece) || gamePiece === false) {
         continue;
       }
 
@@ -479,8 +488,8 @@ export default Ember.Component.extend({
 
   removeProjectile(row, column) {
     const board = this.get('gameBoard');
-    for(let obj of board){
-      if(obj.get('row') === row && obj.get('column') === column){
+    for (let obj of board) {
+      if (obj.get('row') === row && obj.get('column') === column) {
         obj.set('popped', this.get('lastTime'));
         break;
       }
