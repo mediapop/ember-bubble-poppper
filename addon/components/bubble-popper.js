@@ -107,7 +107,11 @@ export default Ember.Component.extend({
 
   loadResource(path, name) {
     const image = new Image();
-    image.onload = this.resourceLoaded.bind(this);
+    image.onload = () => {
+      if (!(this.get('isDestroyed') || this.get('isDestroying'))) {
+        this.resourceLoaded();
+      }
+    };
     image.src = path;
     this.set(name, image);
     this.incrementProperty("_start");
@@ -253,6 +257,9 @@ export default Ember.Component.extend({
   },
 
   gameLoop() {
+    if (this.get('isDestroyed') || this.get('isDestroying')) {
+      return;
+    }
     this.set('runLoop', requestAnimationFrame(this.gameLoop.bind(this)));
 
     const dateNow = new Date();
