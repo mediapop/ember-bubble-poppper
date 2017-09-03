@@ -55,6 +55,7 @@ export default Ember.Component.extend({
   // @todo Rename to size
   pieceWidth: 85,
   paused: false,
+  buffer: 2,
 
   animationDuration: 1000,
   // @todo rename to frames
@@ -77,9 +78,12 @@ export default Ember.Component.extend({
     return 85 * this.get('gameWidth');
   }),
   height: Ember.computed('playerHeight', function () {
-    // @todo This is inaccurate. The rows actually squeeze together.
-    const gameBoardHeight = (7 * this.get('pieceWidth') * this.get('gameHeight') / 8) + (this.get('pieceWidth') / 8);
+    const realGameHeight = this.get('gameHeight') + this.get('buffer');
+
+    const gameBoardHeight = (7 * this.get('pieceWidth') * realGameHeight / 8) + (this.get('pieceWidth') / 8);
+
     const buffer = this.get('pieceWidth');
+
     const playerHeight = this.get('playerHeight');
     return gameBoardHeight + buffer + playerHeight;
   }),
@@ -353,19 +357,19 @@ export default Ember.Component.extend({
       type = this.get('projectile.type');
     }
 
-    if (row <= this.get('gameHeight')) {
-      this.addGamePiece(row, column, type);
-      const similar = this.findSimilar(row, column);
+    this.addGamePiece(row, column, type);
+    const similar = this.findSimilar(row, column);
 
-      if (similar.length > 2) {
-        this.sendAction('poppedBubbles', similar.length);
+    if (similar.length > 2) {
+      this.sendAction('poppedBubbles', similar.length);
 
-        for (const gamePiece of similar) {
-          this.removeProjectile(gamePiece.get('row'), gamePiece.get('column'));
-        }
-
-        this.clearOrphans();
+      for (const gamePiece of similar) {
+        this.removeProjectile(gamePiece.get('row'), gamePiece.get('column'));
       }
+
+      this.clearOrphans();
+    } else if (row >= (this.get('gameHeight') + this.get('buffer'))) {
+      this.removeProjectile(row, column);
     }
 
     this.addProjectile();
@@ -488,6 +492,9 @@ export default Ember.Component.extend({
   removeProjectile(row, column) {
     const board = this.get('gameBoard');
     for (let obj of board) {
+      if (obj.get('popped')) {
+        continue;
+      }
       if (obj.get('row') === row && obj.get('column') === column) {
         obj.set('popped', this.get('lastTime'));
         break;
@@ -502,7 +509,7 @@ export default Ember.Component.extend({
     const centerX = this.get('projectile.positionX');
     const centerY = this.get('projectile.positionY');
 
-    for (const obj of this.get('gameBoard')) {
+    for (const obj of this.get('gameBoard').filter(obj => !obj.get('popped'))) {
       const dx = centerX - obj.get('centerX');
       const dy = centerY - obj.get('centerY');
       const distance = Math.sqrt(dx * dx + dy * dy);
