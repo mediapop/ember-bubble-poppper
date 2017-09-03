@@ -177,14 +177,6 @@ export default Ember.Component.extend({
     const duration = this.get('duration');
     const projectile = this.get('projectile');
 
-    // this.get('gameBoard').forEach(bubble => {
-    //   bubble.set('zoom', bubble.get('zoom') * (1 - duration / 1000));
-    // });
-
-    // this.get('gameBoard').filter(obj => obj.get('popped')).forEach(bubble => {
-    //   bubble.set('zoom', bubble.get('zoom') * (1 - duration / 1000));
-    // });
-
     const velocityX = projectile.get('velocityX') * duration;
     const velocityY = projectile.get('velocityY') * duration;
 
