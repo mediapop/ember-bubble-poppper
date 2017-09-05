@@ -56,6 +56,7 @@ export default Ember.Component.extend({
   pieceWidth: 85,
   paused: false,
   buffer: 2,
+  gameSpeed: 1,
 
   animationDuration: 1000,
   // @todo rename to frames
@@ -133,7 +134,7 @@ export default Ember.Component.extend({
     let zoom = bubble.get('zoom');
     const size = this.get('pieceWidth');
 
-    const duration = this.get('lastTime') - bubble.get('popped') || 0;
+    const duration = (this.get('lastTime') - bubble.get('popped') * this.get('gameSpeed')) || 0;
     let imageIndex = 0;
     if (duration) {
       const animationProportion = duration / this.get('animationDuration');
@@ -178,7 +179,7 @@ export default Ember.Component.extend({
   },
 
   updateMovements() {
-    const duration = this.get('duration');
+    const duration = this.get('duration') * this.get('gameSpeed');
     const projectile = this.get('projectile');
 
     const velocityX = projectile.get('velocityX') * duration;
