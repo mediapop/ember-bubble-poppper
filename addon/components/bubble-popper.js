@@ -327,9 +327,12 @@ export default Ember.Component.extend({
     const projectileX2 = projectileX1 + width;
     const projectileY1 = centerY - radius;
 
-    if (projectileX1 <= 0 || projectileX2 > this.get('width')) {
-      this.set('projectile.velocityX', -this.get('projectile.velocityX'));
-      return;
+    if (projectileX1 < 0) {
+      this.set('projectile.positionX', radius);
+      return this.set('projectile.velocityX', Math.abs(this.get('projectile.velocityX')));
+    } else if (projectileX2 > this.get('width')) {
+      this.set('projectile.positionX', this.get('width') - radius);
+      return this.set('projectile.velocityX', -Math.abs(this.get('projectile.velocityX')));
     }
 
     let type;
